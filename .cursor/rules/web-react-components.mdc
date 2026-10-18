@@ -1,0 +1,46 @@
+---
+description: Next.js React components must be arrow functions with a single responsibility
+globs: web/src/**/*.tsx
+alwaysApply: false
+---
+
+# React components (web)
+
+- Export **functional components as arrow functions**. Do not use `function ComponentName()`.
+- Route files (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`) follow the same rule: `const Page = () => {}` then `export default Page`.
+- Each component does **one thing**. If it mixes layout, data fetching UI, and a form, split it.
+- Put split pieces in the **same folder** as the parent, one component per file.
+- Name files after the component: `ChatWindow.tsx` exports `ChatWindow`.
+
+```tsx
+// ❌ BAD — function declaration, mixed concerns
+export default function ChatTestPage() {
+  return (
+    <div>
+      <StorePicker />
+      <MessageList />
+      <Composer />
+    </div>
+  );
+}
+
+// ✅ GOOD — arrow component; page only composes
+const ChatTestPage = () => (
+  <div>
+    <StorePicker />
+    <MessageList />
+    <Composer />
+  </div>
+);
+
+export default ChatTestPage;
+```
+
+Folder after a split (feature stays together):
+
+```
+components/chat/
+  ChatWindow.tsx
+  MessageList.tsx
+  Composer.tsx
+```

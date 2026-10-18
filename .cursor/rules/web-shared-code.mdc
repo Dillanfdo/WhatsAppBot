@@ -1,0 +1,32 @@
+---
+description: Colocate feature UI; put cross-page components and functions in shared folders
+globs: web/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Shared vs colocated code (web)
+
+- Components used by **one** page or feature live under `web/src/components/<feature>/`.
+- Components used by **two or more** pages live under `web/src/components/shared/`.
+- shadcn primitives stay in `web/src/components/ui/` and are imported from there; do not duplicate them.
+- Functions/helpers used by **two or more** pages, routes, or features live in `web/src/lib/` (domain folders like `lib/booking`, `lib/ai` are shared).
+- Do not put reusable helpers inside a page file or a feature component folder if another route needs them.
+
+```
+# ❌ BAD — ChatWindow copied or imported across admin + chat from a feature folder
+components/chat/ChatWindow.tsx   // also used by admin
+app/admin/page.tsx
+
+# ✅ GOOD
+components/shared/ChatWindow.tsx
+app/chat/page.tsx
+app/admin/page.tsx
+```
+
+```
+# ❌ BAD — slot helper only in a component
+components/admin/AvailabilityForm.tsx  // getAvailableSlots defined here
+
+# ✅ GOOD
+lib/booking/slots.ts
+```
