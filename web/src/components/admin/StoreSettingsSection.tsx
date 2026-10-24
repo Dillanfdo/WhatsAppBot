@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { StoreSettingsCard } from "@/components/admin/StoreSettingsCard";
-import { getStore, listStoreHours, listStoreResources } from "@/lib/stores";
+import { getStore, listStoreHours } from "@/lib/stores";
 
 type StoreSettingsSectionProps = {
   params: Promise<{ id: string }>;
@@ -18,13 +18,10 @@ export const StoreSettingsSection = async ({ params }: StoreSettingsSectionProps
     notFound();
   }
 
-  const [storeResources, hours] = await Promise.all([
-    listStoreResources(storeId),
-    listStoreHours(storeId),
-  ]);
+  const hours = await listStoreHours(storeId);
   if (!hours) {
     notFound();
   }
 
-  return <StoreSettingsCard store={store} resources={storeResources} hours={hours} />;
+  return <StoreSettingsCard store={store} hours={hours} />;
 };

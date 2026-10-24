@@ -208,9 +208,9 @@ Business name/type, address, hours summary, tone and languages, services (names,
 - Politely refuse requests outside the business's scope.
 
 ### Tools (Zod-validated)
-`get_slots`, `create_booking`, `cancel_booking`, `list_my_bookings`, `get_policy`.
-`business_id` and the customer's phone are **injected by the server** and are not
-parameters the model can set.
+`get_slots`, `create_booking`, `list_my_bookings`, `cancel_booking`, `reschedule_booking`, `get_policy`.
+`storeId`, phone, and conversation id are injected by the server. The model cannot set them.
+The trial default provider is local Ollama (`LLM_PROVIDER=ollama`, model `qwen2.5:7b`). Set `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` to use Claude instead. There is no login in this trial; the admin UI is local-only.
 
 ### Loop
 Call the model, execute any requested tools, return results, repeat, with a **hard cap of 5 tool calls per message**. On tool errors, return structured errors the agent can explain. If the cap is hit or the model fails, send a safe fallback message and offer human handoff. Use the default model; escalate to the fallback model only for hard cases.
@@ -222,13 +222,14 @@ Treat all customer text as untrusted. A customer must only see and cancel their 
 
 ## 11. Trial version: screens and features
 
-### Admin UI (`/admin`)
-- Stores list and **create store** form (basics, timezone, booking rules)
-- Opening hours editor (supports split shifts)
-- Resources and services management (add, edit, deactivate)
-- Policy documents editor (privacy, terms, cancellation, no-show, FAQ, rules, price list)
-- Bookings table with filters and a cancel action
-- A store cannot go live without hours, at least one resource, one service, and privacy, terms and cancellation documents
+### Admin UI
+- `/admin` dashboard (live/draft counts, today's bookings, next 7 days, incomplete setup, latest bookings)
+- `/admin/stores` store list. New stores go through `/admin/onboarding` (templates: salon, dentist, game centre, restaurant, clinic, other). `/admin/stores/new` redirects there.
+- Store settings tabs: General, Hours & closures, Resources, Services, Policies. Go live and Pause.
+- `/admin/bookings` filters, cancel, confirm a held booking, add a booking
+- `/chat` test chat with phone presets, debug panel, and LLM health
+
+Business config keys: `slot_interval_min`, `tone`, `languages`, `cancellation_window_hours`, `min_notice_hours`, `max_days_ahead`, `auto_confirm`, `max_active_bookings_per_customer`, `bookable_weekdays`. Prices are stored in `price_cents`. Per-resource hours exist in the engine (seeded for one stylist) and have no settings UI.
 
 ### Chat test page (`/chat`)
 Store picker, **fake phone number field** (different numbers simulate different customers), message list, "New session" button, and a collapsible **debug panel** showing each tool call, its input and result.
@@ -245,15 +246,19 @@ If the same `get_slots` and `create_booking` code works correctly for all three,
 
 ## 12. Build phases and status
 
-1. **Foundation: done.** Next.js app, Docker Postgres, schema and migrations (including `btree_gist` and the exclusion constraint)
-2. **Seed data: done**: three stores, documents, integrity checks
-3. **Booking engine** (no AI): slots, create, cancel, tests including concurrency
-4. **Agent layer**: prompt, tools, loop, `/api/chat`
-5. **Chat test page**: real stores, debug panel
-6. **Admin UI**: store setup, bookings list
-7. **Hardening and evals**: scripted conversations, injection tests, cost check
+The trial is implemented with no auth. Booking facts come from the engine. The model only calls tools.
 
-Build and test the booking engine **before** adding AI. The agent should be a thin wrapper over proven functions.
+1. Ollama client, health check, optional Anthropic: done
+2. Booking engine, slots API, unit and integration tests: done
+3. Agent tools, prompt, loop, chat and conversation APIs: done
+4. Chat page: done
+5. Bookings admin: done
+6. Store settings (resources, services, policies, closures, pause): done
+7. Onboarding wizard and templates: done
+8. Dashboard: done
+9. Eval runner (`npm run eval`) and cross-customer test: done
+
+See `web/docs/EVALS.md` for how to read eval results.
 
 ---
 

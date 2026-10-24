@@ -1,11 +1,5 @@
-import { BookingsHeader } from "@/components/admin/BookingsHeader";
-import { EmptyBookingsTable } from "@/components/admin/EmptyBookingsTable";
+import { BookingsBoard } from "@/components/admin/BookingsBoard";
 
-const BookingsPage = () => (
-  <div className="space-y-4">
-    <BookingsHeader />
-    <EmptyBookingsTable />
-  </div>
-);
+const BookingsPage = () => <BookingsBoard />;
 
 export default BookingsPage;

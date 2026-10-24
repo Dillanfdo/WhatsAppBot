@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { StoreHoursForm } from "@/components/admin/StoreHoursForm";
-import { StoreResourcesTable } from "@/components/admin/StoreResourcesTable";
+import { ClosureEditor, PolicyEditor, ReadinessPanel, ResourceEditor, ServiceEditor } from "@/components/admin/StoreCatalog";
 import { StoreSettingsForm } from "@/components/admin/StoreSettingsForm";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,11 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { StoreDetails, StoreResource, UpdateStoreHoursInput } from "@/lib/validation";
+import type { StoreDetails, UpdateStoreHoursInput } from "@/lib/validation";
 
 type StoreSettingsCardProps = {
   store: StoreDetails;
-  resources: StoreResource[];
   hours: UpdateStoreHoursInput;
 };
 
@@ -27,7 +26,7 @@ const formatTimestamp = (date: Date, timezone: string): string => {
   return formatted;
 };
 
-export const StoreSettingsCard = ({ store, resources, hours }: StoreSettingsCardProps) => (
+export const StoreSettingsCard = ({ store, hours }: StoreSettingsCardProps) => (
   <Card>
     <CardHeader>
       <div className="flex items-center justify-between gap-3">
@@ -39,20 +38,30 @@ export const StoreSettingsCard = ({ store, resources, hours }: StoreSettingsCard
       <CardDescription>{store.type}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-6">
-      <Tabs defaultValue="settings">
+      <ReadinessPanel storeId={store.id} active={store.isActive} />
+      <Tabs defaultValue="general">
         <TabsList>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="hours">Hours</TabsTrigger>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="hours">Hours & closures</TabsTrigger>
           <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
-        <TabsContent value="settings">
+        <TabsContent value="general">
           <StoreSettingsForm store={store} />
         </TabsContent>
-        <TabsContent value="hours">
+        <TabsContent value="hours" className="space-y-6">
           <StoreHoursForm storeId={store.id} hours={hours} />
+          <ClosureEditor storeId={store.id} />
         </TabsContent>
         <TabsContent value="resources">
-          <StoreResourcesTable resources={resources} />
+          <ResourceEditor storeId={store.id} />
+        </TabsContent>
+        <TabsContent value="services">
+          <ServiceEditor storeId={store.id} />
+        </TabsContent>
+        <TabsContent value="policies">
+          <PolicyEditor storeId={store.id} storeName={store.name} />
         </TabsContent>
       </Tabs>
       <dl className="grid grid-cols-[minmax(0,8rem)_1fr] gap-x-4 gap-y-2 text-sm">

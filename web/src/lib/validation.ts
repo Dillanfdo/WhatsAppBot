@@ -2,9 +2,11 @@ import { z } from "zod";
 import { DEFAULT_TIMEZONE } from "@/lib/time";
 
 export const chatRequestSchema = z.object({
-  storeId: z.string().min(1),
+  storeId: z.uuid(),
   phone: z.string().min(1),
   message: z.string().min(1),
+  messageId: z.string().min(1).optional(),
+  sessionId: z.uuid().optional(),
 });
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
@@ -13,15 +15,32 @@ export const agentToolTraceSchema = z.object({
   name: z.string(),
   input: z.unknown(),
   output: z.unknown(),
+  ok: z.boolean(),
+  durationMs: z.number(),
 });
 
 export const agentResultSchema = z.object({
   reply: z.string(),
+  conversationId: z.uuid(),
+  model: z.string(),
+  provider: z.enum(["ollama", "anthropic"]),
   toolCalls: z.array(agentToolTraceSchema),
+  debugError: z.string().optional(),
 });
 
 export type AgentToolTrace = z.infer<typeof agentToolTraceSchema>;
 export type AgentResult = z.infer<typeof agentResultSchema>;
+
+export const llmHealthSchema = z.object({
+  provider: z.enum(["ollama", "anthropic"]),
+  model: z.string(),
+  reachable: z.boolean(),
+  modelInstalled: z.boolean(),
+  toolSupport: z.boolean().nullable(),
+  message: z.string(),
+});
+
+export type LlmHealth = z.infer<typeof llmHealthSchema>;
 
 export const storeSummarySchema = z.object({
   id: z.uuid(),
@@ -92,7 +111,14 @@ const isIanaTimezone = (value: string): boolean => {
   }
 };
 
-export const storeTypeSchema = z.enum(["salon", "restaurant", "game_centre"]);
+export const storeTypeSchema = z.enum([
+  "salon",
+  "dentist",
+  "game_centre",
+  "restaurant",
+  "clinic",
+  "other",
+]);
 
 export const resourceTypeSchema = z.enum(["staff", "table", "room", "console", "chair"]);
 

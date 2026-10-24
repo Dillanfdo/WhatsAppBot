@@ -1,5 +1,7 @@
-import { CreateStoreForm } from "@/components/admin/CreateStoreForm";
+import { redirect } from "next/navigation";
 
-const NewStorePage = () => <CreateStoreForm />;
+const NewStorePage = () => {
+  redirect("/admin/onboarding");
+};
 
 export default NewStorePage;

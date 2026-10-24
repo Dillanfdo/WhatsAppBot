@@ -390,3 +390,18 @@ export async function activateStore(id: string): Promise<ActivateStoreResult> {
   }
   return { status: "active", store };
 }
+
+export async function deactivateStore(id: string): Promise<StoreDetails | null> {
+  const current = await getStore(id);
+  if (!current) {
+    return null;
+  }
+  if (!current.isActive) {
+    return current;
+  }
+  await db
+    .update(businesses)
+    .set({ isActive: false, updatedAt: new Date() })
+    .where(eq(businesses.id, id));
+  return getStore(id);
+}

@@ -9,11 +9,14 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:int": "vitest run --config vitest.int.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "seed": "tsx src/scripts/seed.ts",
-    "verify:db": "tsx src/scripts/verify-db.ts"
+    "verify:db": "tsx src/scripts/verify-db.ts",
+    "llm:check": "tsx --conditions=react-server src/scripts/llm-check.ts",
+    "eval": "tsx --conditions=react-server src/evals/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

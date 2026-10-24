@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhatsAppBot web
 
-## Getting Started
+The store admin UI, chatbot test page, and HTTP API all run in this Next.js app. Postgres runs separately in Docker.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js LTS (20.19+; 22+ is safer)
+- npm
+- Docker Desktop
+
+## 1. Database
+
+From the repository root (`WhatsAppBot/`):
+
+```bash
+docker compose up -d
+```
+
+That starts Postgres 16 and keeps it running in the background.
+
+| Setting  | Value                                      |
+| -------- | ------------------------------------------ |
+| Host     | `localhost`                                |
+| Port     | `5432`                                     |
+| Database | `whatsappbot`                              |
+| User     | `postgres`                                 |
+| Password | `postgres`                                 |
+
+Connection string (already in `.env.example`):
+
+```text
+postgres://postgres:postgres@localhost:5432/whatsappbot
+```
+
+Check that the container is up:
+
+```bash
+docker compose ps
+```
+
+Stop the database (data stays in the Docker volume):
+
+```bash
+docker compose down
+```
+
+## 2. Environment
+
+From `web/`:
+
+```powershell
+copy .env.example .env.local
+```
+
+On macOS or Linux:
+
+```bash
+cp .env.example .env.local
+```
+
+Put connection strings and the Ollama settings in `.env.local`. An Anthropic key is required only when `LLM_PROVIDER=anthropic`. Leave `.env.local` out of git.
+
+```bash
+ollama pull qwen2.5:7b
+ollama serve
+npm run llm:check
+```
+
+`llama3.1:8b` and `qwen3:8b` are other tool-capable models.
+
+## 3. Install and migrate
+
+From `web/`:
+
+```bash
+npm install
+npm run db:migrate
+```
+
+Optional sample stores:
+
+```bash
+npm run seed
+```
+
+## 4. UI and backend
+
+The UI and the API are the same process. From `web/`:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Surface | URL |
+| ------- | --- |
+| Dashboard | [http://localhost:3000/admin](http://localhost:3000/admin) |
+| Stores | [http://localhost:3000/admin/stores](http://localhost:3000/admin/stores) |
+| New store wizard | [http://localhost:3000/admin/onboarding](http://localhost:3000/admin/onboarding) |
+| Bookings | [http://localhost:3000/admin/bookings](http://localhost:3000/admin/bookings) |
+| Chat test | [http://localhost:3000/chat](http://localhost:3000/chat) |
+| DB health | [http://localhost:3000/api/health](http://localhost:3000/api/health) |
+| LLM health | [http://localhost:3000/api/health/llm](http://localhost:3000/api/health/llm) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`/api/health` should return `{ "ok": true }` when Postgres is reachable. Other routes live under `src/app/api/` (`/api/stores`, `/api/chat`).
 
-## Learn More
+Production-style run after a build:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` — UI and API (Next.js dev server)
+- `npm run lint` — ESLint
+- `npm run typecheck` — `tsc --noEmit`
+- `npm test` — Vitest unit tests
+- `npm run test:int` — integration tests against `whatsappbot_test`
+- `npm run eval` — model evals (`--runs N`), writes `src/evals/last-report.json`
+- `npm run llm:check` — Ollama reachable, model installed, tools advertised
+- `npm run db:generate` / `db:migrate` / `db:studio` — Drizzle
+- `npm run seed` — seed stores
+- `npm run verify:db` — check the database connection

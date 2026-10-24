@@ -9,7 +9,7 @@ export const StoreListHeader = () => (
         Business locations this assistant can book for.
       </p>
     </div>
-    <Link className={buttonVariants()} href="/admin/stores/new">
+    <Link className={buttonVariants()} href="/admin/onboarding">
       New store
     </Link>
   </div>
