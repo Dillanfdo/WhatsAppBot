@@ -254,6 +254,22 @@ export const createService = async (storeId: string, input: ServiceWrite) => {
 
 export const updateService = async (storeId: string, serviceId: string, input: Partial<ServiceWrite>) => {
   await assertStore(storeId);
+  if (input.minParty !== undefined || input.maxParty !== undefined) {
+    const current = await db
+      .select({ minParty: services.minParty, maxParty: services.maxParty })
+      .from(services)
+      .where(and(eq(services.id, serviceId), eq(services.businessId, storeId)))
+      .limit(1);
+    const existing = current[0];
+    if (!existing) {
+      throw new BookingError("not_found", "Service not found.");
+    }
+    const minParty = input.minParty ?? existing.minParty;
+    const maxParty = input.maxParty ?? existing.maxParty;
+    if (maxParty < minParty) {
+      throw new BookingError("invalid_state", "Maximum party size must be at least the minimum.");
+    }
+  }
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.description !== undefined) patch.description = input.description;

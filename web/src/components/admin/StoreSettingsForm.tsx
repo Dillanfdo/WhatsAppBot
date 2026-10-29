@@ -4,26 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { StoreSettingsNumberField } from "@/components/admin/StoreSettingsNumberField";
+import { StoreBasicsFields } from "@/components/admin/StoreBasicsFields";
+import { StoreRulesFields } from "@/components/admin/StoreRulesFields";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Form } from "@/components/ui/form";
 import {
   STORE_LANGUAGE_OPTIONS,
   STORE_TONE_OPTIONS,
@@ -34,14 +18,9 @@ import {
 
 type StoreSettingsFormProps = {
   store: StoreDetails;
+  /** "rules" shows only booking rules (used by the onboarding wizard); other fields keep their saved values. */
+  sections?: "all" | "rules";
 };
-
-const NUMBER_FIELDS = [
-  { name: "cancellationWindowHours", label: "Cancellation window (hours)" },
-  { name: "minNoticeHours", label: "Min notice (hours)" },
-  { name: "maxDaysAhead", label: "Max days ahead" },
-  { name: "maxActiveBookingsPerCustomer", label: "Max active bookings per customer" },
-] as const satisfies readonly { name: keyof UpdateStoreInput; label: string }[];
 
 const withCurrentOption = (options: readonly string[], current: string | undefined): string[] => {
   if (current && current.trim().length > 0 && !options.includes(current)) {
@@ -85,7 +64,7 @@ const storeToFormValues = (store: StoreDetails): UpdateStoreInput => ({
   maxActiveBookingsPerCustomer: store.config.max_active_bookings_per_customer ?? 0,
 });
 
-export const StoreSettingsForm = ({ store }: StoreSettingsFormProps) => {
+export const StoreSettingsForm = ({ store, sections = "all" }: StoreSettingsFormProps) => {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const form = useForm<UpdateStoreInput>({
@@ -123,199 +102,10 @@ export const StoreSettingsForm = ({ store }: StoreSettingsFormProps) => {
   return (
     <Form {...form}>
       <form className="max-w-xl space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address</FormLabel>
-              <FormControl>
-                <Textarea {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="mapUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Map URL</FormLabel>
-              <FormControl>
-                <Input {...field} inputMode="url" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="contactPhone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact phone</FormLabel>
-              <FormControl>
-                <Input {...field} inputMode="tel" placeholder="+919876543210" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="contactEmail"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact email</FormLabel>
-              <FormControl>
-                <Input {...field} type="email" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="ownerWhatsapp"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>WhatsApp</FormLabel>
-              <FormControl>
-                <Input {...field} inputMode="tel" placeholder="+919876543210" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid gap-4 sm:grid-cols-[1fr_8rem] sm:items-end">
-          <StoreSettingsNumberField form={form} name="slotAmount" label="Slot interval" min={1} />
-          <FormField
-            control={form.control}
-            name="slotUnit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Unit</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={(value) => {
-                    if (value === "min" || value === "hours") {
-                      field.onChange(value);
-                    }
-                  }}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="min">min</SelectItem>
-                    <SelectItem value="hours">hours</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="languages"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Languages</FormLabel>
-              <FormControl>
-                <div className="flex flex-wrap gap-4">
-                  {languageOptions.map((language) => (
-                    <label key={language} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-primary"
-                        checked={field.value.includes(language)}
-                        onChange={(event) => {
-                          const next = event.target.checked
-                            ? [...field.value, language]
-                            : field.value.filter((item) => item !== language);
-                          field.onChange(next);
-                        }}
-                      />
-                      {language}
-                    </label>
-                  ))}
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {NUMBER_FIELDS.map((item) => (
-          <StoreSettingsNumberField key={item.name} form={form} name={item.name} label={item.label} min={0} />
-        ))}
-
-        <FormField
-          control={form.control}
-          name="autoConfirm"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between gap-3">
-                <FormLabel>Auto confirm</FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="tone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tone</FormLabel>
-              <Select
-                value={field.value}
-                onValueChange={(value) => {
-                  if (value) {
-                    field.onChange(value);
-                  }
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {toneOptions.map((tone) => (
-                    <SelectItem key={tone} value={tone}>
-                      {tone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {sections === "all" ? (
+          <StoreBasicsFields form={form} toneOptions={toneOptions} languageOptions={languageOptions} />
+        ) : null}
+        <StoreRulesFields form={form} />
 
         {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
         <Button type="submit" disabled={!form.formState.isDirty || form.formState.isSubmitting}>

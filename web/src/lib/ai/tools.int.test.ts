@@ -1,11 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { createConversation } from "@/lib/ai/conversations";
-import { executeTool } from "@/lib/ai/tools";
+import { executeTool, missingRequiredAnswers } from "@/lib/ai/tools";
 import { createBooking } from "@/lib/booking/bookings";
 import { db } from "@/lib/db";
-import { messages } from "@/lib/db/schema";
+import { messages, services } from "@/lib/db/schema";
 import { toISO, toDbWeekday } from "@/lib/time";
 import { SEED_IDS } from "@/scripts/seed-data";
 
@@ -144,5 +144,52 @@ describe("tool handlers", () => {
       .from(messages)
       .where(eq(messages.conversationId, conversationId));
     expect(cancelled).toEqual([]);
+  });
+});
+
+describe("required intake questions", () => {
+  const questions = [
+    { key: "allergies", label: "Any allergies?", required: true },
+    { key: "notes", label: "Anything else?", required: false },
+  ];
+
+  it("lists only required questions that have no usable answer", () => {
+    expect(missingRequiredAnswers(questions, undefined)).toEqual(["allergies (Any allergies?)"]);
+    expect(missingRequiredAnswers(questions, { allergies: "  " })).toHaveLength(1);
+    expect(missingRequiredAnswers(questions, { allergies: "none" })).toEqual([]);
+  });
+});
+
+describe("create_booking with a required intake question", () => {
+  it("asks for the missing answer before anything else, and stops asking once answered", async () => {
+    const condition = and(eq(services.businessId, SEED_IDS.salon), eq(services.name, "Haircut"));
+    const before = await db.select({ intakeQuestions: services.intakeQuestions }).from(services).where(condition);
+    await db
+      .update(services)
+      .set({ intakeQuestions: [{ key: "allergies", label: "Any allergies?", required: true }] })
+      .where(condition);
+    try {
+      const conversationId = await createConversation(SEED_IDS.salon, phoneA);
+      const base = {
+        service_name: "Haircut",
+        date: salonDay().toFormat("yyyy-MM-dd"),
+        time: "18:00",
+        customer_confirmed: true,
+      };
+      const context = { storeId: SEED_IDS.salon, phone: phoneA, conversationId };
+
+      const missing = await executeTool("create_booking", base, context);
+      expect(missing).toMatchObject({ ok: false, error: { code: "invalid_state" } });
+      expect(JSON.stringify(missing)).toContain("allergies");
+
+      // With the answer present the request moves on to the next gate: the time was never offered.
+      const answered = await executeTool("create_booking", { ...base, intake_answers: { allergies: "none" } }, context);
+      expect(answered).toMatchObject({ ok: false, error: { message: "That time was not offered in this conversation." } });
+    } finally {
+      await db
+        .update(services)
+        .set({ intakeQuestions: before[0]?.intakeQuestions ?? [] })
+        .where(condition);
+    }
   });
 });

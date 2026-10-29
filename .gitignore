@@ -21,3 +21,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# eval output
+web/src/evals/last-report.json

@@ -14,10 +14,9 @@ import { assignmentCombinations, freeByTypeAt } from "@/lib/booking/availability
 import {
   assertPartySize,
   assertStoreActive,
-  dateGate,
+  blockedDay,
   formatLocalLabel,
   formatPrice,
-  hasAnyWindow,
   loadDayContext,
   loadService,
   loadStore,
@@ -271,15 +270,12 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     partySize: input.partySize,
     preferredResourceId: input.preferredResourceId,
   });
-  const gate = dateGate(store, context.day, context.weekday);
-  if (gate) {
-    throw new BookingError(gate.code, gate.message);
+  const blocked = blockedDay(store, context.day, context.weekday, context.windows);
+  if (blocked) {
+    throw new BookingError(blocked.code, blocked.message);
   }
   if (input.preferredResourceId && context.resources.length === 0) {
     throw new BookingError("slot_unavailable", "That resource cannot take this booking.");
-  }
-  if (!hasAnyWindow(context.windows)) {
-    throw new BookingError("closed_that_day", "The store is closed that day.");
   }
   const verdict = judgeStart(context, start);
   if (!verdict.ok) {
@@ -493,12 +489,9 @@ export async function rescheduleBooking(input: {
     partySize: booking.partySize,
     excludeBookingId: input.bookingId,
   });
-  const gate = dateGate(store, withoutSelf.day, withoutSelf.weekday);
-  if (gate) {
-    throw new BookingError(gate.code, gate.message);
-  }
-  if (!hasAnyWindow(withoutSelf.windows)) {
-    throw new BookingError("closed_that_day", "The store is closed that day.");
+  const blocked = blockedDay(store, withoutSelf.day, withoutSelf.weekday, withoutSelf.windows);
+  if (blocked) {
+    throw new BookingError(blocked.code, blocked.message);
   }
   const verdict = judgeStart(withoutSelf, start);
   if (!verdict.ok) {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { missingSetupItems, readinessFromFacts, type ReadinessFacts } from "./store-readiness";
+import {
+  firstSetupStep,
+  missingSetupItems,
+  readinessFromFacts,
+  setupItemLabel,
+  type ReadinessFacts,
+} from "./store-readiness";
 
 const readyFacts = (): ReadinessFacts => ({
   businessHourCount: 1,
@@ -47,5 +53,18 @@ describe("missingSetupItems", () => {
     const facts = readyFacts();
     expect(missingSetupItems(facts)).toEqual([]);
     expect(readinessFromFacts(facts)).toEqual({ ready: true, missing: [] });
+  });
+});
+
+describe("setup item helpers", () => {
+  it("sends the owner to the earliest wizard step that still has a gap", () => {
+    expect(firstSetupStep(["cancellation", "service"])).toBe(4);
+    expect(firstSetupStep(["privacy", "terms"])).toBe(6);
+    expect(firstSetupStep([])).toBe(7);
+  });
+
+  it("falls back to the raw key for unknown items", () => {
+    expect(setupItemLabel("hours")).toBe("opening hours");
+    expect(setupItemLabel("mystery")).toBe("mystery");
   });
 });

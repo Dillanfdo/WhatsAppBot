@@ -1,22 +1,16 @@
-import { notFound } from "next/navigation";
-import { z } from "zod";
-import { OnboardingResume } from "@/components/admin/OnboardingWizard";
-import { getStore, listStoreHours } from "@/lib/stores";
+import { Suspense } from "react";
+import { OnboardingSection } from "@/components/admin/onboarding/OnboardingSection";
 
-const OnboardingStorePage = async ({
+const OnboardingStorePage = ({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ step?: string }>;
-}) => {
-  const { id } = await params;
-  const { step } = await searchParams;
-  if (!z.uuid().safeParse(id).success) notFound();
-  const store = await getStore(id);
-  const hours = store ? await listStoreHours(id) : null;
-  if (!store || !hours) notFound();
-  return <OnboardingResume store={store} hours={hours} step={Number(step ?? "2")} />;
-};
+}) => (
+  <Suspense fallback={<p className="text-sm text-muted-foreground">Loading setup…</p>}>
+    <OnboardingSection params={params} searchParams={searchParams} />
+  </Suspense>
+);
 
 export default OnboardingStorePage;

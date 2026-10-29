@@ -13,7 +13,7 @@ import { BookingError, isBookingError } from "@/lib/booking/errors";
 import { getPolicy, isPolicyType } from "@/lib/booking/policy";
 import { getAvailableSlots } from "@/lib/booking/slots";
 import { db } from "@/lib/db";
-import { businesses, messages, resources, services } from "@/lib/db/schema";
+import { businesses, messages, resources, services, type IntakeQuestion } from "@/lib/db/schema";
 import type { ToolHandlerResult } from "@/lib/ai/agent-loop";
 import type { LlmToolDefinition } from "@/lib/ai/llm/types";
 import { toISO } from "@/lib/time";
@@ -177,9 +177,26 @@ const cancellationHours = async (storeId: string): Promise<number> => {
   return rows[0]?.config.cancellation_window_hours ?? 0;
 };
 
+export const missingRequiredAnswers = (
+  questions: IntakeQuestion[],
+  answers: Record<string, unknown> | undefined,
+): string[] =>
+  questions
+    .filter((question) => question.required === true)
+    .filter((question) => {
+      const value = answers?.[question.key ?? "answer"];
+      return value === undefined || value === null || String(value).trim().length === 0;
+    })
+    .map((question) => `${question.key ?? "answer"} (${question.label ?? question.prompt ?? "question"})`);
+
 const resolveService = async (storeId: string, serviceName: string) => {
   const rows = await db
-    .select({ id: services.id, name: services.name, minParty: services.minParty })
+    .select({
+      id: services.id,
+      name: services.name,
+      minParty: services.minParty,
+      intakeQuestions: services.intakeQuestions,
+    })
     .from(services)
     .where(and(eq(services.businessId, storeId), eq(services.isActive, true)))
     .orderBy(asc(services.name));
@@ -323,6 +340,14 @@ export async function executeTool(
     const service = await resolveService(context.storeId, input.service_name);
     if (!service.ok) {
       return service.error;
+    }
+    const missingAnswers = missingRequiredAnswers(service.service.intakeQuestions, input.intake_answers);
+    if (missingAnswers.length > 0) {
+      return fail(
+        "invalid_state",
+        "Required booking questions are unanswered.",
+        `Ask the customer, then pass intake_answers keyed by question key: ${missingAnswers.join("; ")}.`,
+      );
     }
     const offered = await slotWasOffered(context.conversationId, service.service.name, input.date, input.time);
     if (!offered) {

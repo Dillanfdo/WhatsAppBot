@@ -226,10 +226,18 @@ Treat all customer text as untrusted. A customer must only see and cancel their 
 - `/admin` dashboard (live/draft counts, today's bookings, next 7 days, incomplete setup, latest bookings)
 - `/admin/stores` store list. New stores go through `/admin/onboarding` (templates: salon, dentist, game centre, restaurant, clinic, other). `/admin/stores/new` redirects there.
 - Store settings tabs: General, Hours & closures, Resources, Services, Policies. Go live and Pause.
+  - Resources: add, edit inline, active toggle, remove (deactivates when it has bookings), CSV import.
+  - Services: add and edit in a dialog (description, buffer, price, party size, several required resource types, restrict to specific resources, intake questions, active toggle), CSV import. Warns when no eligible resource can seat the largest party.
+  - Policies: one field per document with version and saved date, plus generators for starter privacy and terms, cancellation from the store's rules, and the price list from services.
+  - Closures: whole days, ranges or part days, shown in the store timezone.
+- Onboarding wizard (`/admin/onboarding`, resume at `/admin/onboarding/[id]?step=n`): 7 steps (Basics, Hours, Resources, Services, Rules, Policies, Review). Step 1 collects every basics field (owner WhatsApp, contact phone, address and name are required). **Next is blocked** until the saved data for that step passes (`src/lib/onboarding/step-gate.ts`). Templates apply hours, resources, services and starter policies. New stores default to auto confirm on.
+- Dashboard: stores that need setup list what is missing and link to the wizard step that fixes it.
 - `/admin/bookings` filters, cancel, confirm a held booking, add a booking
 - `/chat` test chat with phone presets, debug panel, and LLM health
 
 Business config keys: `slot_interval_min`, `tone`, `languages`, `cancellation_window_hours`, `min_notice_hours`, `max_days_ahead`, `auto_confirm`, `max_active_bookings_per_customer`, `bookable_weekdays`. Prices are stored in `price_cents`. Per-resource hours exist in the engine (seeded for one stylist) and have no settings UI.
+
+Service intake questions are shown to the agent in the system prompt. `create_booking` is rejected until every **required** question has an answer in `intake_answers`.
 
 ### Chat test page (`/chat`)
 Store picker, **fake phone number field** (different numbers simulate different customers), message list, "New session" button, and a collapsible **debug panel** showing each tool call, its input and result.
@@ -256,7 +264,7 @@ The trial is implemented with no auth. Booking facts come from the engine. The m
 6. Store settings (resources, services, policies, closures, pause): done
 7. Onboarding wizard and templates: done
 8. Dashboard: done
-9. Eval runner (`npm run eval`) and cross-customer test: done
+9. Eval runner (`npm run eval`) and cross-customer test: done. 38 scripted cases check tool calls, final booking statuses and reply text (`src/evals/judge.ts` is unit tested).
 
 See `web/docs/EVALS.md` for how to read eval results.
 

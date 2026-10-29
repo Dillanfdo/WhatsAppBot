@@ -1,4 +1,4 @@
-import { OnboardingStart } from "@/components/admin/OnboardingWizard";
+import { OnboardingStart } from "@/components/admin/onboarding/OnboardingStart";
 
 const OnboardingPage = () => <OnboardingStart />;
 

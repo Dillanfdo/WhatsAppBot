@@ -363,5 +363,31 @@ export const dateGate = (
   return null;
 };
 
+/** Open with hours, but this weekday does not accept bookings: customers walk in. */
+export const WALK_IN_DAY_MESSAGE =
+  "The store is open that day for walk-ins. Bookings are not available.";
+
+export const blockedDay = (
+  store: LoadedStore,
+  day: DateTime,
+  weekday: number,
+  windows: ReadonlyMap<string, MinuteWindow[]>,
+): { code: "too_soon" | "too_far" | "closed_that_day"; message: string } | null => {
+  const gate = dateGate(store, day, weekday);
+  if (gate?.code === "closed_that_day") {
+    return {
+      code: "closed_that_day",
+      message: hasAnyWindow(windows) ? WALK_IN_DAY_MESSAGE : "The store is closed that day.",
+    };
+  }
+  if (gate) {
+    return gate;
+  }
+  if (!hasAnyWindow(windows)) {
+    return { code: "closed_that_day", message: "The store is closed that day." };
+  }
+  return null;
+};
+
 export const hasAnyWindow = (windows: ReadonlyMap<string, MinuteWindow[]>): boolean =>
   [...windows.values()].some((list) => list.length > 0);

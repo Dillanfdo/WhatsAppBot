@@ -26,6 +26,10 @@ export const TestPhoneField = ({ presetId, phone, onPresetChange, onPhoneChange 
     <div className="space-y-2">
       <Label htmlFor="phone-preset">Customer</Label>
       <Select
+        items={PHONE_PRESETS.map((preset) => ({
+          value: preset.id,
+          label: preset.phone ? `${preset.label} ${preset.phone}` : preset.label,
+        }))}
         value={presetId}
         onValueChange={(value) => {
           if (value === "one" || value === "two" || value === "custom") {
@@ -37,13 +41,20 @@ export const TestPhoneField = ({ presetId, phone, onPresetChange, onPhoneChange 
         }}
       >
         <SelectTrigger id="phone-preset" className="w-full">
-          <SelectValue placeholder="Choose a customer" />
+          <SelectValue placeholder="Choose a customer">
+            {(value: string | null) => {
+              const preset = PHONE_PRESETS.find((item) => item.id === value);
+              if (!preset) {
+                return "Choose a customer";
+              }
+              return preset.phone ? `${preset.label} ${preset.phone}` : preset.label;
+            }}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {PHONE_PRESETS.map((preset) => (
             <SelectItem key={preset.id} value={preset.id}>
-              {preset.label}
-              {preset.phone ? ` ${preset.phone}` : ""}
+              {preset.phone ? `${preset.label} ${preset.phone}` : preset.label}
             </SelectItem>
           ))}
         </SelectContent>

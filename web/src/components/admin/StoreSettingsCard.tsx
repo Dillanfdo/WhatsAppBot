@@ -1,7 +1,11 @@
 import { DateTime } from "luxon";
 import { StoreHoursForm } from "@/components/admin/StoreHoursForm";
-import { ClosureEditor, PolicyEditor, ReadinessPanel, ResourceEditor, ServiceEditor } from "@/components/admin/StoreCatalog";
 import { StoreSettingsForm } from "@/components/admin/StoreSettingsForm";
+import { ClosureEditor } from "@/components/shared/store-setup/ClosureEditor";
+import { PolicyEditor } from "@/components/shared/store-setup/PolicyEditor";
+import { ReadinessPanel } from "@/components/shared/store-setup/ReadinessPanel";
+import { ResourceEditor } from "@/components/shared/store-setup/ResourceEditor";
+import { ServiceEditor } from "@/components/shared/store-setup/ServiceEditor";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -52,7 +56,7 @@ export const StoreSettingsCard = ({ store, hours }: StoreSettingsCardProps) => (
         </TabsContent>
         <TabsContent value="hours" className="space-y-6">
           <StoreHoursForm storeId={store.id} hours={hours} />
-          <ClosureEditor storeId={store.id} />
+          <ClosureEditor storeId={store.id} timezone={store.timezone} />
         </TabsContent>
         <TabsContent value="resources">
           <ResourceEditor storeId={store.id} />

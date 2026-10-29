@@ -45,8 +45,12 @@ export type LlmChatResponse = {
   raw?: unknown;
 };
 
+export const llmProviders = ["ollama", "anthropic", "nvidia"] as const;
+
+export type LlmProvider = (typeof llmProviders)[number];
+
 export type LlmClient = {
-  provider: "ollama" | "anthropic";
+  provider: LlmProvider;
   model: string;
   chat: (request: LlmChatRequest) => Promise<LlmChatResponse>;
 };

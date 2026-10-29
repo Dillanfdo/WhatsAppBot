@@ -1,9 +1,10 @@
 import "server-only";
 import { env } from "@/lib/env";
 import { modelIsInstalled } from "@/lib/ai/llm/parse";
+import type { LlmProvider } from "@/lib/ai/llm/types";
 
 export type LlmHealth = {
-  provider: "ollama" | "anthropic";
+  provider: LlmProvider;
   model: string;
   reachable: boolean;
   modelInstalled: boolean;
@@ -112,7 +113,84 @@ const checkOllama = async (): Promise<LlmHealth> => {
   }
 };
 
+const modelIds = (body: unknown): string[] => {
+  if (!body || typeof body !== "object" || !("data" in body) || !Array.isArray(body.data)) {
+    return [];
+  }
+  return body.data.flatMap((item) => {
+    if (!item || typeof item !== "object" || !("id" in item) || typeof item.id !== "string") {
+      return [];
+    }
+    return [item.id];
+  });
+};
+
+const checkNvidia = async (): Promise<LlmHealth> => {
+  const model = env.NVIDIA_MODEL;
+  const key = env.NVIDIA_API_KEY;
+  if (!key) {
+    return {
+      provider: "nvidia",
+      model,
+      reachable: false,
+      modelInstalled: false,
+      toolSupport: null,
+      message: "LLM_PROVIDER=nvidia but NVIDIA_API_KEY is missing.",
+    };
+  }
+  const base = env.NVIDIA_BASE_URL.replace(/\/$/, "");
+  try {
+    const listed = await fetchJson(`${base}/models`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (listed.status === 401 || listed.status === 403) {
+      return {
+        provider: "nvidia",
+        model,
+        reachable: false,
+        modelInstalled: false,
+        toolSupport: null,
+        message: "NVIDIA rejected the API key.",
+      };
+    }
+    if (!listed.ok) {
+      return {
+        provider: "nvidia",
+        model,
+        reachable: false,
+        modelInstalled: false,
+        toolSupport: null,
+        message: `NVIDIA models endpoint responded ${listed.status}.`,
+      };
+    }
+    const ids = modelIds(listed.body);
+    const installed = ids.length === 0 || ids.includes(model);
+    return {
+      provider: "nvidia",
+      model,
+      reachable: true,
+      modelInstalled: installed,
+      toolSupport: installed ? true : null,
+      message: installed
+        ? `NVIDIA is reachable and ${model} is available.`
+        : `NVIDIA accepted the key, but "${model}" is not in the model list.`,
+    };
+  } catch {
+    return {
+      provider: "nvidia",
+      model,
+      reachable: false,
+      modelInstalled: false,
+      toolSupport: null,
+      message: `NVIDIA is not reachable at ${base}.`,
+    };
+  }
+};
+
 export const checkLlm = async (): Promise<LlmHealth> => {
+  if (env.LLM_PROVIDER === "nvidia") {
+    return checkNvidia();
+  }
   if (env.LLM_PROVIDER === "anthropic") {
     const model = env.ANTHROPIC_MODEL_DEFAULT ?? "";
     const hasKey = Boolean(env.ANTHROPIC_API_KEY);

@@ -2,6 +2,8 @@ import "server-only";
 import { and, count, desc, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { availabilityRules, bookings, businesses, businessDocuments, resources, services } from "@/lib/db/schema";
+import { firstSetupStep, readinessFromFacts, type SetupItem } from "@/lib/store-readiness";
+import { formatLocalDateTime } from "@/lib/time";
 
 export const storeStatusCounts = async () => {
   const rows = await db
@@ -43,28 +45,56 @@ export const bookingTotal = async () => {
   return Number(rows[0]?.value ?? 0);
 };
 
-export const incompleteStoreCount = async () => {
-  const rows = await db
-    .select({ value: count() })
-    .from(businesses)
-    .where(
-      sql`not exists (select 1 from ${availabilityRules} r where r.business_id = ${businesses.id} and r.resource_id is null)
-        or not exists (select 1 from ${resources} r where r.business_id = ${businesses.id} and r.is_active)
-        or not exists (select 1 from ${services} s where s.business_id = ${businesses.id} and s.is_active)
-        or not exists (select 1 from ${businessDocuments} d where d.business_id = ${businesses.id} and d.type = 'privacy')
-        or not exists (select 1 from ${businessDocuments} d where d.business_id = ${businesses.id} and d.type = 'terms')
-        or not exists (select 1 from ${businessDocuments} d where d.business_id = ${businesses.id} and d.type = 'cancellation')`,
-    );
-  return Number(rows[0]?.value ?? 0);
+export type StoreSetupNeed = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  missing: SetupItem[];
+  resumeStep: number;
 };
 
-export const recentBookings = async () =>
-  db
+type SetupFactsRow = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  hour_count: number;
+  resource_count: number;
+  service_count: number;
+  doc_types: string[];
+};
+
+/** Stores that cannot go live yet, with what is missing, from one query. */
+export const storesNeedingSetup = async (): Promise<StoreSetupNeed[]> => {
+  const result = await db.execute<SetupFactsRow>(sql`
+    select b.id, b.name, b.is_active,
+      (select count(*)::int from ${availabilityRules} r where r.business_id = b.id and r.resource_id is null) as hour_count,
+      (select count(*)::int from ${resources} r where r.business_id = b.id and r.is_active) as resource_count,
+      (select count(*)::int from ${services} s where s.business_id = b.id and s.is_active) as service_count,
+      array(select distinct d.type from ${businessDocuments} d where d.business_id = b.id) as doc_types
+    from ${businesses} b
+    order by b.created_at desc
+  `);
+  return result.rows.flatMap((row) => {
+    const { missing } = readinessFromFacts({
+      businessHourCount: row.hour_count,
+      activeResourceCount: row.resource_count,
+      activeServiceCount: row.service_count,
+      documentTypes: row.doc_types,
+    });
+    return missing.length === 0
+      ? []
+      : [{ id: row.id, name: row.name, isActive: row.is_active, missing, resumeStep: firstSetupStep(missing) }];
+  });
+};
+
+export const recentBookings = async () => {
+  const rows = await db
     .select({
       id: bookings.id,
       status: bookings.status,
       startsAt: bookings.startsAt,
       storeName: businesses.name,
+      timezone: businesses.timezone,
       serviceName: services.name,
     })
     .from(bookings)
@@ -72,3 +102,8 @@ export const recentBookings = async () =>
     .innerJoin(services, sql`${services.id} = ${bookings.serviceId}`)
     .orderBy(desc(bookings.createdAt))
     .limit(10);
+  return rows.map(({ startsAt, timezone, ...row }) => ({
+    ...row,
+    startsLabel: formatLocalDateTime(startsAt, timezone),
+  }));
+};

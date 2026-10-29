@@ -12,11 +12,15 @@ const optionalText = z
 const envSchema = z
   .object({
     DATABASE_URL: z.string().min(1),
-    LLM_PROVIDER: z.enum(["ollama", "anthropic"]).default("ollama"),
+    LLM_PROVIDER: z.enum(["ollama", "anthropic", "nvidia"]).default("ollama"),
     OLLAMA_BASE_URL: z.string().url().default("http://localhost:11434"),
     OLLAMA_MODEL: z.string().min(1).default("qwen2.5:7b"),
     OLLAMA_NUM_CTX: z.coerce.number().int().positive().default(8192),
     OLLAMA_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+    NVIDIA_API_KEY: optionalText,
+    NVIDIA_BASE_URL: z.string().url().default("https://integrate.api.nvidia.com/v1"),
+    NVIDIA_MODEL: z.string().min(1).default("nvidia/nemotron-3.5-super-vl-120b-a12b"),
+    NVIDIA_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
     LLM_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.2),
     MAX_TOOL_CALLS_PER_MESSAGE: z.coerce.number().int().positive().default(5),
     TEST_DATABASE_URL: z
@@ -52,6 +56,16 @@ const envSchema = z
         message: "ANTHROPIC_MODEL_FALLBACK is required when LLM_PROVIDER=anthropic",
       });
     }
+  })
+  .superRefine((value, ctx) => {
+    if (value.LLM_PROVIDER !== "nvidia" || value.NVIDIA_API_KEY) {
+      return;
+    }
+    ctx.addIssue({
+      code: "custom",
+      path: ["NVIDIA_API_KEY"],
+      message: "NVIDIA_API_KEY is required when LLM_PROVIDER=nvidia",
+    });
   });
 
 const blankToUndefined = (value: string | undefined): string | undefined => {
@@ -68,6 +82,10 @@ const parsed = envSchema.safeParse({
   OLLAMA_MODEL: blankToUndefined(process.env.OLLAMA_MODEL),
   OLLAMA_NUM_CTX: blankToUndefined(process.env.OLLAMA_NUM_CTX),
   OLLAMA_TIMEOUT_MS: blankToUndefined(process.env.OLLAMA_TIMEOUT_MS),
+  NVIDIA_API_KEY: process.env.NVIDIA_API_KEY,
+  NVIDIA_BASE_URL: blankToUndefined(process.env.NVIDIA_BASE_URL),
+  NVIDIA_MODEL: blankToUndefined(process.env.NVIDIA_MODEL),
+  NVIDIA_TIMEOUT_MS: blankToUndefined(process.env.NVIDIA_TIMEOUT_MS),
   LLM_TEMPERATURE: blankToUndefined(process.env.LLM_TEMPERATURE),
   MAX_TOOL_CALLS_PER_MESSAGE: blankToUndefined(process.env.MAX_TOOL_CALLS_PER_MESSAGE),
   TEST_DATABASE_URL: blankToUndefined(process.env.TEST_DATABASE_URL),

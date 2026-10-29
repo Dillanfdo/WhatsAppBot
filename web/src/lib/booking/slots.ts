@@ -8,9 +8,8 @@ import {
 } from "@/lib/booking/availability";
 import {
   assertPartySize,
-  dateGate,
+  blockedDay,
   formatLocalLabel,
-  hasAnyWindow,
   loadDayContext,
   loadService,
   loadStore,
@@ -127,15 +126,12 @@ export async function getAvailableSlots(input: GetAvailableSlotsInput): Promise<
     partySize: input.partySize,
     preferredResourceId: input.preferredResourceId,
   });
-  const gate = dateGate(store, context.day, context.weekday);
-  if (gate) {
-    return { slots: [], note: gate.message };
+  const blocked = blockedDay(store, context.day, context.weekday, context.windows);
+  if (blocked) {
+    return { slots: [], note: blocked.message };
   }
   if (input.preferredResourceId && context.resources.length === 0) {
     return { slots: [], note: "That resource cannot take this booking." };
-  }
-  if (!hasAnyWindow(context.windows)) {
-    return { slots: [], note: "The store is closed that day." };
   }
 
   const slots: AvailableSlot[] = [];

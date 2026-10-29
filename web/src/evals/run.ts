@@ -13,14 +13,16 @@ const main = async () => {
 
   const runsFlag = process.argv.findIndex((arg) => arg === "--runs");
   const runs = Math.max(1, Number(runsFlag >= 0 ? process.argv[runsFlag + 1] : 1) || 1);
-  const { evalCases, runCase } = await import("./cases");
+  const { evalCases } = await import("./cases");
+  const { runCase } = await import("./runner");
+  const cases = evalCases();
 
   const totals = new Map<string, { pass: number; fail: number; reasons: string[] }>();
-  for (const item of evalCases) totals.set(item.id, { pass: 0, fail: 0, reasons: [] });
+  for (const item of cases) totals.set(item.id, { pass: 0, fail: 0, reasons: [] });
 
   for (let run = 1; run <= runs; run += 1) {
     console.log(`run ${run}/${runs}`);
-    for (const item of evalCases) {
+    for (const item of cases) {
       const result = await runCase(item);
       const bucket = totals.get(item.id);
       if (!bucket) continue;

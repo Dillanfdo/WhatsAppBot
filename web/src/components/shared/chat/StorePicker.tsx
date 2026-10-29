@@ -17,10 +17,14 @@ type StorePickerProps = {
   onStoreIdChange: (storeId: string) => void;
 };
 
+const storeLabel = (store: StoreSummary): string =>
+  store.isActive ? store.name : `${store.name} (Draft)`;
+
 export const StorePicker = ({ stores, storeId, onStoreIdChange }: StorePickerProps) => (
   <div className="space-y-2">
     <Label htmlFor="store">Store</Label>
     <Select
+      items={stores.map((store) => ({ value: store.id, label: storeLabel(store) }))}
       value={storeId}
       onValueChange={(value) => {
         if (typeof value === "string") {
@@ -29,13 +33,17 @@ export const StorePicker = ({ stores, storeId, onStoreIdChange }: StorePickerPro
       }}
     >
       <SelectTrigger id="store" className="w-full">
-        <SelectValue placeholder="Select a store" />
+        <SelectValue placeholder="Select a store">
+          {(value: string | null) => {
+            const store = stores.find((item) => item.id === value);
+            return store ? storeLabel(store) : "Select a store";
+          }}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {stores.map((store) => (
           <SelectItem key={store.id} value={store.id}>
-            {store.name}
-            {store.isActive ? "" : " (Draft)"}
+            {storeLabel(store)}
           </SelectItem>
         ))}
       </SelectContent>

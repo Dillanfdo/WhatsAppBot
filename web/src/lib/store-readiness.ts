@@ -44,3 +44,28 @@ export const readinessFromFacts = (facts: ReadinessFacts): StoreReadiness => {
   const missing = missingSetupItems(facts);
   return { ready: missing.length === 0, missing };
 };
+
+export const SETUP_ITEM_LABELS: Record<SetupItem, string> = {
+  hours: "opening hours",
+  resource: "at least one resource",
+  service: "at least one service",
+  privacy: "Privacy Policy",
+  terms: "Terms and Conditions",
+  cancellation: "cancellation policy",
+};
+
+/** Onboarding wizard step (1-7) where each missing item is fixed. */
+export const SETUP_ITEM_STEP: Record<SetupItem, number> = {
+  hours: 2,
+  resource: 3,
+  service: 4,
+  privacy: 6,
+  terms: 6,
+  cancellation: 6,
+};
+
+export const setupItemLabel = (item: string): string =>
+  item in SETUP_ITEM_LABELS ? SETUP_ITEM_LABELS[item as SetupItem] : item;
+
+export const firstSetupStep = (missing: readonly SetupItem[]): number =>
+  missing.length === 0 ? 7 : Math.min(...missing.map((item) => SETUP_ITEM_STEP[item]));

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { llmProviders } from "@/lib/ai/llm/types";
 import { DEFAULT_TIMEZONE } from "@/lib/time";
 
 export const chatRequestSchema = z.object({
@@ -23,7 +24,7 @@ export const agentResultSchema = z.object({
   reply: z.string(),
   conversationId: z.uuid(),
   model: z.string(),
-  provider: z.enum(["ollama", "anthropic"]),
+  provider: z.enum(llmProviders),
   toolCalls: z.array(agentToolTraceSchema),
   debugError: z.string().optional(),
 });
@@ -32,7 +33,7 @@ export type AgentToolTrace = z.infer<typeof agentToolTraceSchema>;
 export type AgentResult = z.infer<typeof agentResultSchema>;
 
 export const llmHealthSchema = z.object({
-  provider: z.enum(["ollama", "anthropic"]),
+  provider: z.enum(llmProviders),
   model: z.string(),
   reachable: z.boolean(),
   modelInstalled: z.boolean(),
@@ -276,9 +277,64 @@ export const updateStoreHoursSchema = z
 
 export type UpdateStoreHoursInput = z.infer<typeof updateStoreHoursSchema>;
 
-export const bookingFilterSchema = z.object({
-  // TODO: date range, store, status filters
-  storeId: z.string().min(1).optional(),
+
+const intakeQuestionSchema = z.object({
+  key: z.string().trim().min(1).optional(),
+  label: z.string().trim().min(1, "Enter the question text"),
+  required: z.boolean().optional(),
 });
 
-export type BookingFilter = z.infer<typeof bookingFilterSchema>;
+const serviceRequirementSchema = z.object({
+  resourceType: resourceTypeSchema,
+  quantity: z.number().int().min(1),
+});
+
+const serviceFields = {
+  name: z.string().trim().min(1, "Enter a service name"),
+  description: z.string().optional(),
+  durationMin: z.number().int().positive("Duration must be at least 1 minute"),
+  bufferAfterMin: z.number().int().min(0).optional(),
+  priceCents: z.number().int().min(0).nullable().optional(),
+  minParty: z.number().int().min(1).optional(),
+  maxParty: z.number().int().min(1).optional(),
+  intakeQuestions: z.array(intakeQuestionSchema).optional(),
+  isActive: z.boolean().optional(),
+  requirements: z.array(serviceRequirementSchema).optional(),
+  resourceIds: z.array(z.uuid()).optional(),
+};
+
+type ServiceWriteShape = {
+  minParty?: number;
+  maxParty?: number;
+  requirements?: { resourceType: string }[];
+};
+
+const checkServiceShape = (value: ServiceWriteShape, ctx: z.RefinementCtx) => {
+  if (value.minParty !== undefined && value.maxParty !== undefined && value.maxParty < value.minParty) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Maximum party size must be at least the minimum",
+      path: ["maxParty"],
+    });
+  }
+  const types = (value.requirements ?? []).map((item) => item.resourceType);
+  if (new Set(types).size !== types.length) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Each resource type can be listed only once",
+      path: ["requirements"],
+    });
+  }
+};
+
+export const serviceWriteSchema = z.object(serviceFields).superRefine(checkServiceShape);
+
+export const servicePatchSchema = z
+  .object({
+    ...serviceFields,
+    name: serviceFields.name.optional(),
+    durationMin: serviceFields.durationMin.optional(),
+  })
+  .superRefine(checkServiceShape);
+
+export type ServiceWriteInput = z.infer<typeof serviceWriteSchema>;

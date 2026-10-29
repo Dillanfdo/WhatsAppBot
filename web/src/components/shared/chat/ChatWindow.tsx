@@ -9,7 +9,7 @@ type ChatWindowProps = {
 };
 
 export const ChatWindow = ({ messages, onSend, sending }: ChatWindowProps) => (
-  <div className="flex h-[28rem] flex-col rounded-xl border">
+  <div className="flex h-[28rem] min-h-0 flex-col overflow-hidden rounded-xl border">
     <MessageList messages={messages} sending={sending} />
     <Composer onSend={onSend} disabled={sending} />
   </div>

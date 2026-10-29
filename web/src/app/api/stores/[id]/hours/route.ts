@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { replaceStoreHours } from "@/lib/stores";
+import { listStoreHours, replaceStoreHours } from "@/lib/stores";
 import { updateStoreHoursSchema } from "@/lib/validation";
 
 const storeIdContext = async (context: { params: Promise<{ id: string }> }) => {
@@ -9,6 +9,23 @@ const storeIdContext = async (context: { params: Promise<{ id: string }> }) => {
   }
   return { id };
 };
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const parsedId = await storeIdContext(context);
+  if ("error" in parsedId) {
+    return parsedId.error;
+  }
+
+  const hours = await listStoreHours(parsedId.id);
+  if (!hours) {
+    return Response.json({ error: "Store not found" }, { status: 404 });
+  }
+
+  return Response.json({ hours });
+}
 
 export async function PATCH(
   request: Request,

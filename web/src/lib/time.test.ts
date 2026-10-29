@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TIMEZONE, nowInTimezone, parseHHMM, toDbWeekday } from "./time";
+import { DEFAULT_TIMEZONE, formatClosureRange, nowInTimezone, parseHHMM, toDbWeekday } from "./time";
 
 function kolkata(year: number, month: number, day: number): DateTime {
   return DateTime.fromObject({ year, month, day, hour: 12 }, { zone: "Asia/Kolkata" });
@@ -49,5 +49,25 @@ describe("parseHHMM", () => {
     expect(() => parseHHMM("10:60")).toThrow(/HH:MM/);
     expect(() => parseHHMM("1:00")).toThrow(/HH:MM/);
     expect(() => parseHHMM("10:00:00")).toThrow(/HH:MM/);
+  });
+});
+
+describe("formatClosureRange", () => {
+  it("shows a single closed day as all day", () => {
+    expect(formatClosureRange("2026-11-06T18:30:00.000Z", "2026-11-07T18:30:00.000Z")).toBe("07 Nov 2026 (all day)");
+  });
+
+  it("shows a multi-day closure as a date range", () => {
+    expect(formatClosureRange("2026-11-06T18:30:00.000Z", "2026-11-09T18:30:00.000Z")).toBe("07 Nov 2026 to 09 Nov 2026");
+  });
+
+  it("shows date and time for a part-day closure", () => {
+    expect(formatClosureRange("2026-11-07T06:30:00.000Z", "2026-11-07T09:30:00.000Z")).toBe(
+      "07 Nov 2026, 12:00 PM to 07 Nov 2026, 3:00 PM",
+    );
+  });
+
+  it("returns a dash for invalid input", () => {
+    expect(formatClosureRange("nope", "nope")).toBe("—");
   });
 });
